@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+numpy
+faiss-cpu
+gitpython
+sentence-transformers
+psycopg2-binary
+python-dotenv
+requests
+pyjwt
+httpx
+bcrypt
+authlib
+starlette
