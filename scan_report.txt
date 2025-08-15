@@ -1,0 +1,188 @@
+# Security Audit Report
+
+**Issues Found:** 7 total issues
+
+---
+
+## 1. Call to requests without timeout
+**File:** .\.\search_commits.py
+**Line:** 53
+**Severity:** MEDIUM
+**Confidence:** LOW
+
+**Issue:**
+Call to requests without timeout
+
+**AI Suggestion:**
+To add a timeout to your requests, you can use the `requests.post()` function's `timeout` parameter. Here's a concise fix:
+```python
+from requests.api import post
+res = post(url, headers=headers, json=payload, timeout=5)  # Adjust timeout value as needed
+res.raise_for_status()
+```
+This will ensure your request times out after 5 seconds (default value is 10 seconds). You can adjust the value as needed to fit your application requirements.
+
+---
+
+## 2. Possible hardcoded password: 'django-insecure-960r(ls3o*iivobg4!^8m@bvx(ra$!ap7+g8u@6&qu4n!4s9wv'
+**File:** .\.\vyn-web-demo\scanboard\settings.py
+**Line:** 24
+**Severity:** LOW
+**Confidence:** MEDIUM
+
+**Issue:**
+Possible hardcoded password: 'django-insecure-960r(ls3o*iivobg4!^8m@bvx(ra$!ap7+g8u@6&qu4n!4s9wv'
+
+**AI Suggestion:**
+To address this security issue, you should generate a new secret key and replace the hardcoded one in your code. Here's a Python one-liner to generate a new secret key:
+```bash
+django-admin.py shell
+from django.core.management.utils import get_random_secret_key
+print(get_random_secret_key())
+```
+After getting the new secret key, replace the hardcoded line in your settings.py file with the new secret key:
+```python
+SECRET_KEY = 'new_secret_key_here'
+```
+This fix will help ensure your secret key is safe and not hardcoded in your project's visible files. Always keep your secret key secure and consider not storing it in version control systems.
+
+---
+
+## 3. Call to requests without timeout
+**File:** .\.\vyn-web-demo\scanner\analyzer.py
+**Line:** 299
+**Severity:** MEDIUM
+**Confidence:** LOW
+
+**Issue:**
+Call to requests without timeout
+
+**AI Suggestion:**
+To address the potential security issue of not having a timeout in your requests, you can add a timeout parameter to the requests.post function. Here's a fix:
+```python
+from requests.api import post
+# ... rest of your code
+response = post(url, headers=headers, json=data, timeout=10)  # adjust timeout value as needed
+response.raise_for_status()
+```
+Explanation: This code snippet adds the `timeout` parameter to the requests.post function, which defines a timeout for handling slow network conditions or server-side delays. The value specified for timeout will be in seconds (10 seconds in this example), and it ensures that your script does not wait indefinitely for the response. Adjust the timeout value based on your requirements.
+
+---
+
+## 4. Consider possible security implications associated with the subprocess module.
+**File:** .\.\vyn-web-demo\scanner\views.py
+**Line:** 2
+**Severity:** LOW
+**Confidence:** HIGH
+
+**Issue:**
+Consider possible security implications associated with the subprocess module.
+
+**AI Suggestion:**
+To mitigate security risks when using the `subprocess` module in Python, you can ensure that you're correctly dealing with user-supplied data and that you're handling the output and errors properly. Here's a secure way to call an external command with a user-supplied argument:
+```python
+import json
+import subprocess
+import tempfile
+import shlex
+import os
+command = os.path.abspath(user_supplied_command)  # Make sure the command is an absolute path
+args = shlex.quote(json.dumps(user_supplied_args))  # Quote any user-supplied arguments
+with tempfile.TemporaryDirectory() as tmpdir:
+with subprocess.Popen(['command', args], cwd=tmpdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
+output, error = p.communicate()
+if p.returncode != 0:
+print(f'Error when running command: {error.decode()}')
+else:
+print(f'Command output: {output.decode()}')
+```
+In this improved code snippet, the command and arguments are correctly validated with `os.path.abspath` and `shlex.quote` respectively. The use of a temporary directory (`tmpdir = tempfile.TemporaryDirectory()`) can prevent issues with current working directory and write access. Moreover, `stdin`, `stdout`, and `stderr` are explicitly managed in the subprocess call, allowing for better error handling.
+
+---
+
+## 5. Starting a process with a partial executable path
+**File:** .\.\vyn-web-demo\scanner\views.py
+**Line:** 57
+**Severity:** LOW
+**Confidence:** HIGH
+
+**Issue:**
+Starting a process with a partial executable path
+
+**AI Suggestion:**
+To address the security concern of starting a process with a partial executable path, you should always use the full path to the git executable. Here's an example using the `which` command on Unix-based systems or providing the full path directly:
+```python
+import os
+git_path = 'which git' if os.name == 'posix' else 'C:/Program Files/git/bin/git.exe'  # replacing with the actual git executable path if not using the default install location
+result = subprocess.run([git_path, 'clone', '--depth', '1', repo_url, temp_dir],
+check=True,
+stdout=subprocess.PIPE,
+stderr=subprocess.PIPE
+)
+```
+Explanation: The code uses the `which` command or a full path to the git executable based on the operating system (os.name). This helps prevent potential issues with PATH misconfigurations or missing git executables.
+
+---
+
+## 6. subprocess call - check for execution of untrusted input.
+**File:** .\.\vyn-web-demo\scanner\views.py
+**Line:** 57
+**Severity:** LOW
+**Confidence:** HIGH
+
+**Issue:**
+subprocess call - check for execution of untrusted input.
+
+**AI Suggestion:**
+To mitigate the security risk of executing untrusted input, you can verify that the repository URL is known to be safe before cloning it. Here's a fix using the `requests` library and `subprocess`:
+```python
+import requests
+import subprocess
+# ...
+try:
+response = requests.head(repo_url, allow_redirects=True)
+if response.status_code == 200:
+print(f"Cloning into: {temp_dir}")
+result = subprocess.run(
+['git', 'clone', '--depth', '1', repo_url, temp_dir],
+check=True,
+stdout=subprocess.PIPE,
+stderr=subprocess.PIPE
+)
+else:
+print("Invalid or unreachable repository URL")
+except requests.ConnectionError:
+print("Failed to connect to the repository server. Check your network or repository URL.")
+```
+This fix checks if the repository URL is reachable and returns a valid HTTP response (200 OK) before proceeding with the `git clone` command. In case of failure, it prints an error message to help troubleshooting.
+
+---
+
+## 7. Call to requests without timeout
+**File:** .\.\vyn-web-demo\scanner\views.py
+**Line:** 109
+**Severity:** MEDIUM
+**Confidence:** LOW
+
+**Issue:**
+Call to requests without timeout
+
+**AI Suggestion:**
+You can add a timeout to the `requests.post` call to prevent the script from hanging in case of a slow response. Here's a concise fix:
+```python
+from requests.exceptions import RequestException
+import time
+try:
+response = requests.post(url, headers=headers, data=json.dumps(data), timeout=10)
+response.raise_for_status()
+except (RequestException, timeout) as error:
+print(f'Error occurred: {error}')
+```
+Explanation:
+1. Import `RequestException` to handle exceptions raised by the requests module.
+2. Add `timeout` parameter to the `requests.post` call to specify a time (in seconds) that the request should wait for a response before raising a `timeout` exception.
+3. Add an exception block to catch both `RequestException` (which includes `Timeout`, `ConnectionError`, `HTTPError`, etc.) and `timeout` exceptions.
+4. Print an error message containing the error detail.
+
+---
+

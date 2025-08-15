@@ -1,0 +1,112 @@
+import os
+import json
+import faiss
+import requests
+import numpy as np
+from dotenv import load_dotenv
+from sentence_transformers import SentenceTransformer
+from fastapi import APIRouter
+
+router =  APIRouter()
+
+load_dotenv()
+OPENROUTER_API_KEY = os.getenv('OPEN_ROUTER_AI_KEY')
+
+model = SentenceTransformer("all-MiniLM-L6-v2")
+index = faiss.read_index("faiss.index")
+
+with open("commits_with_embeddings.json") as f:
+    commits = json.load(f)
+
+def retrieve_top_k(query, k=3):
+    query_vec = model.encode(query).astype("float32").reshape(1, -1)
+    _, indices = index.search(query_vec, k)
+    return [commits[i] for i in indices[0]]
+
+def ask_llm(commit_context, question):
+    context_str = "\n\n".join(
+[
+  f"Commit: {c['message']}\nAuthor: {c.get('author', 'Unknown')} <{c.get('email', 'no-email')}>\nDate: {c.get('date', 'no-date')}\nDiff:\n{c.get('diff', '')}"
+  for c in commit_context
+]
+    )
+
+    prompt = f"""You are a helpful and expert AI code assistant. Below is a set of git commits and code changes.
+
+Context:
+{context_str}
+
+Now answer the following question:
+{question}
+"""
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "mistralai/mistral-7b-instruct",
+        "messages": [{"role": "user", "content": prompt}]
+    }
+
+    try:
+        res = requests.post(url, headers=headers, json=payload)
+        res.raise_for_status()
+        return res.json()["choices"][0]["message"]["content"]
+    except Exception as e:
+        return f"LLM request failed: {str(e)}"
+
+
+
+def ask_llm_name(url, question):
+    
+
+    prompt = f"""You are a helpful and expert AI code assistant. Below is a url and a query
+
+URL:
+{url}
+
+Now answer the following query:
+{question}
+"""
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "mistralai/mistral-7b-instruct",
+        "messages": [{"role": "user", "content": prompt}]
+    }
+
+    try:
+        res = requests.post(url, headers=headers, json=payload)
+        res.raise_for_status()
+        return res.json()["choices"][0]["message"]["content"]
+    except Exception as e:
+        return f"LLM request failed: {str(e)}"
+
+
+@router.post("/analyze-query")
+def analyze_query(query: str):
+    
+    try:
+        top_commits = retrieve_top_k(query)
+        summary = ask_llm(top_commits, query)
+
+        return {
+            "top_commits": [
+                {
+                    "date": c["date"],
+                    "author": c["author"],
+                    "message": c["message"].strip(),
+                    "hash": c["hash"][:7]
+                }
+                for c in top_commits
+            ],
+            "summary": summary
+        }
+    except Exception as e:
+        return {"error": str(e)}
