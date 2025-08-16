@@ -43,18 +43,18 @@ async def google_login():
         return RedirectResponse(url=google_auth_url)
     except Exception as e:
         print(f"Error initiating Google login: {e}")
-        return RedirectResponse(url="http://localhost:3000/auth?error=google_login_failed")
+        return RedirectResponse(url="https://gitxen-zq9s.vercel.app/auth?error=google_login_failed")
 
 @router.get("/auth/google/callback")
 async def google_callback(code: str = None, error: str = None):
     """Handle Google OAuth callback"""
     if error:
         print(f"Google OAuth error: {error}")
-        return RedirectResponse(url=f"http://localhost:3000/auth?error={error}")
+        return RedirectResponse(url=f"https://gitxen-zq9s.vercel.app/auth?error={error}")
     
     if not code:
         print("No authorization code received")
-        return RedirectResponse(url="http://localhost:3000/auth?error=no_authorization_code")
+        return RedirectResponse(url="https://gitxen-zq9s.vercel.app/auth?error=no_authorization_code")
     
     try:
         token_url = "https://oauth2.googleapis.com/token"
@@ -72,7 +72,7 @@ async def google_callback(code: str = None, error: str = None):
         
         if "access_token" not in token_json:
             print(f"Token exchange failed: {token_json}")
-            return RedirectResponse(url="http://localhost:3000/auth?error=token_exchange_failed")
+            return RedirectResponse(url="https://gitxen-zq9s.vercel.app/auth?error=token_exchange_failed")
         
         access_token = token_json["access_token"]
         
@@ -84,7 +84,7 @@ async def google_callback(code: str = None, error: str = None):
         
         if "email" not in user_info:
             print(f"Failed to get user info: {user_info}")
-            return RedirectResponse(url="http://localhost:3000/auth?error=failed_to_get_user_info")
+            return RedirectResponse(url="https://gitxen-zq9s.vercel.app/auth?error=failed_to_get_user_info")
         
         email = user_info.get('email')
         name = user_info.get('name', email.split('@')[0])  
@@ -123,7 +123,7 @@ async def google_callback(code: str = None, error: str = None):
 
         except Exception as db_error:
             print(f"Database error: {db_error}")
-            return RedirectResponse(url="http://localhost:3000/auth?error=database_error")
+            return RedirectResponse(url="https://gitxen-zq9s.vercel.app/auth?error=database_error")
 
             
         user_data = {
@@ -136,15 +136,15 @@ async def google_callback(code: str = None, error: str = None):
         
         jwt_token = create_access_token(data={"sub": email, "user": user_data})
         
-        frontend_url = f"http://localhost:3000/auth?token={jwt_token}"
+        frontend_url = f"https://gitxen-zq9s.vercel.app/auth?token={jwt_token}"
         return RedirectResponse(url=frontend_url)
         
     except httpx.RequestError as e:
         print(f"HTTP request error: {e}")
-        return RedirectResponse(url="http://localhost:3000/auth?error=network_error")
+        return RedirectResponse(url="https://gitxen-zq9s.vercel.app/auth?error=network_error")
     except Exception as e:
         print(f"Unexpected error in Google callback: {e}")
-        return RedirectResponse(url="http://localhost:3000/auth?error=unexpected_error")
+        return RedirectResponse(url="https://gitxen-zq9s.vercel.app/auth?error=unexpected_error")
 
 @router.post("/google/logout")
 async def google_logout():

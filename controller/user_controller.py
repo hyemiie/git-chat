@@ -144,8 +144,10 @@ def login(user: UserLogin):
             user_input_password = user.password.encode('utf-8')
             if bcrypt.checkpw(user_input_password, stored_hash):
                 access_token = create_access_token(
-                    data={"sub": str(user_record[0])}
-                )
+                    data={"sub": str(user_record[0])},
+                    expires_delta=datetime.timedelta(minutes=60)      
+                                        
+                    )
 
                 return {
                     "status": "success",
