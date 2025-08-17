@@ -30,14 +30,24 @@ def ask_llm(commit_context, question):
   for c in commit_context
 ]
     )
+    prompt = f"""You are an expert AI code assistant.
 
-    prompt = f"""You are a helpful and expert AI code assistant. Below is a set of git commits and code changes.
+You will be given:
+- A set of git commits and code changes (context).
+- A user question.
+
+Instructions:
+- Use only the context provided when answering.
+- Be concise, clear, and directly answer the question.
+- Do not include explanations unless explicitly asked.
 
 Context:
 {context_str}
 
-Now answer the following question:
+Question:
 {question}
+
+Answer:
 """
 
     url = "https://openrouter.ai/api/v1/chat/completions"

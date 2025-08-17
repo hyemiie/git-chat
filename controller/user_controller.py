@@ -60,66 +60,6 @@ def create_new_user(user: UserSignup):
         return {"status": "success", "message": "User created successfully"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
-    
-
-# @router.post("/login")
-# def login(user: UserLogin):
-#     try:
-#         with conn.cursor() as cur:
-#             cur.execute("SELECT * FROM users WHERE email = %s", (user.email,))
-#             user_record = cur.fetchone()
-#             print('user_record', user_record)
-
-#             if not user_record:
-#                 return {"status": "fail", "message": "Invalid email or password"}
-
-#             if user_record[3] is None:
-#                 return {"status": "fail", "message": "Try logging in with Google"}
-
-#             stored_hash_value = user_record[3]
-#             stored_hash = (
-#                 stored_hash_value.tobytes()
-#                 if hasattr(stored_hash_value, 'tobytes')
-#                 else bytes.fromhex(stored_hash_value[2:])
-#             )
-#             user_input_password = user.password.encode('utf-8')
-#             if bcrypt.checkpw(user_input_password, stored_hash):
-#                 return {
-#                     "status": "success",
-#                     "message": "Login successful",
-#                     "data": {
-#                         "id": user_record[0],
-#                         "name": user_record[1],
-#                         "email": user_record[2],
-#                         "profile_image": user_record[6],
-#                         "created_at": user_record[7].isoformat()
-#                     }
-#                 }
-#             else:
-#                 return {"status": "fail", "message": "Invalid email or password"}
-
-#     except Exception as e:
-#         return {"status": "error", "message": str(e)}
-
-#     try:
-#         with conn.cursor() as cur:
-#             cur.execute("SELECT * FROM users WHERE email = %s", (user.email,))
-#             user_record = cur.fetchone()
-#             print('user_record', user_record)
-#             if user_record[3] == None:
-#              return{"message" : "Try logging in with google"}
-#             else:
-#                 stored_hash = user_record[3].tobytes() if hasattr(user_record[3], 'tobytes') else bytes.fromhex(user_record[3][2:])
-#                 user_input_password = user.password.encode('utf-8')
-#             if bcrypt.checkpw(user_input_password, stored_hash):
-#                 print('user exists')
-#                 return user_record
-#             else:
-#                 print('user doesnt')
-#                 return {"status": "fail", "message": "Invalid email or password"}
-#     except Exception as e:
-#         return {"status": "error", "message": str(e)}
-
 
 @router.post("/login")
 def login(user: UserLogin):
