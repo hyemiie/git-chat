@@ -62,10 +62,12 @@ Answer:
 
     try:
         res = requests.post(url, headers=headers, json=payload)
+        print("res", res)
         res.raise_for_status()
         return res.json()["choices"][0]["message"]["content"]
     except Exception as e:
         return f"LLM request failed: {str(e)}"
+    
 
 
 

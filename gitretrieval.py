@@ -89,7 +89,7 @@ def analyze_repo(request: RepoRequest):
     try:
 
         # query = "Give a suitable and concise name for this repository based on its content. Just return the name only.Maximum 2-3 word"
-        query = "Give a concise name for this repository based on its content. Return ONLY the name. Use exactly 2 words. Do not include quotes or extra text."
+        query = "Give a concise name for this repository based on its content. Return ONLY the name. Use exactly 2 words. Do not include quotes or extra text or brackets or explanations."
         generated_name = ask_llm_name(repo_url, query)
         print("repo", generated_name)
 

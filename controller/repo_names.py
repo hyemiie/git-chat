@@ -31,10 +31,10 @@ def create_new_repo(payload: RepoCreateRequest):
         return {"message": "Repository added successfully"}
     except DatabaseError as e:
         conn.rollback()
-        print(e)
+        print('rgyhuji', e)
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
-        print(e)
+        print("error", e)
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 

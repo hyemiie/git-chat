@@ -61,6 +61,7 @@ def create_new_user(user: UserSignup):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+
 @router.post("/login")
 def login(user: UserLogin):
     try:
