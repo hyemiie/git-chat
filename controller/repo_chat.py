@@ -132,7 +132,6 @@ def get_chat_history(user_id: int, repo_id: int):
         print("error", e)
         raise HTTPException(status_code=500, detail=str(e))
 
-# Additional endpoint to get chat statistics
 @router.get("/chat/stats/{repo_id}")
 def get_chat_stats(repo_id: int):
     try:
@@ -164,7 +163,6 @@ def get_chat_stats(repo_id: int):
         print("error", e)
         raise HTTPException(status_code=500, detail=str(e))
 
-# Endpoint to clear old messages (optional)
 @router.delete("/chat/clear_old/{repo_id}")
 def clear_old_messages(repo_id: int, days: int = 30):
     try:
