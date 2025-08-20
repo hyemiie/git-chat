@@ -11,7 +11,7 @@ router = APIRouter()
 class ChatAddRequest(BaseModel):
     user_id: int
     repo_id: int
-    sender: str  # "user" or "ai"
+    sender: str 
     message_text: str
 
 class ChatListRequest(BaseModel):

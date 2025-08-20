@@ -46,6 +46,12 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
+
+@router.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 @router.post("/signup")
 def create_new_user(user: UserSignup):
     try:
