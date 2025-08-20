@@ -105,6 +105,7 @@ import os
 import json
 import tempfile
 import hashlib
+from typing import Optional
 import numpy as np
 import faiss
 from fastapi import APIRouter, HTTPException
@@ -286,7 +287,7 @@ def analyze_query(request: dict):
 
 class RepoRequest(BaseModel):
     repo_path: str
-    query : str
+    query : Optional[str]
 
 
 @router.post("/analyze-repo")
