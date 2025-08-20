@@ -169,7 +169,9 @@ def delete_user(user: UserLogin):
 
 # @router.get("/check-auth")
 # def check_auth(request: Request):
-    user = request.session.get("user")
-    if user:
-        return {"authenticated": True, "user": user}
-    return {"authenticated": False}
+    # user = request.session.get("user")
+    # if user:
+    #     return {"authenticated": True, "user": user}
+    # return {"authenticated": False}
+
+
