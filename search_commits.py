@@ -95,51 +95,92 @@ def retrieve_top_k(repo_id, query, k=3, model_name="all-MiniLM-L6-v2"):
     return [commits[i] for i in indices[0]]
 
 
-def ask_llm(commit_context, question):
-    """Ask the LLM given commit context + question"""
-    context_str = "\n\n".join(
-        [
-            f"Commit: {c['message']}\nAuthor: {c.get('author', 'Unknown')} <{c.get('email', 'no-email')}>\nDate: {c.get('date', 'no-date')}\nDiff:\n{c.get('diff', '')}"
-            for c in commit_context
-        ]
+# def ask_llm(commit_context, question):
+#     """Ask the LLM given commit context + question"""
+#     context_str = "\n\n".join(
+#         [
+#             f"Commit: {c['message']}\nAuthor: {c.get('author', 'Unknown')} <{c.get('email', 'no-email')}>\nDate: {c.get('date', 'no-date')}\nDiff:\n{c.get('diff', '')}"
+#             for c in commit_context
+#         ]
+#     )
+
+#     prompt = f"""You are an expert AI code assistant.
+# You will be given:
+# - A set of git commits and code changes (context).
+# - A user question.
+
+# Instructions:
+# - Use only the context provided when answering.
+# - Be concise, clear, and directly answer the question.
+# - Do not include explanations unless explicitly asked.
+
+# Context:
+# {context_str}
+
+# Question:
+# {question}
+
+# Answer:
+# """
+
+#     url = "https://openrouter.ai/api/v1/chat/completions"
+#     headers = {
+#         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+#         "Content-Type": "application/json"
+#     }
+#     payload = {
+#         "model": "mistralai/mistral-7b-instruct",
+#         "messages": [{"role": "user", "content": prompt}]
+#     }
+
+#     try:
+#         res = requests.post(url, headers=headers, json=payload)
+#         res.raise_for_status()
+#         data = res.json()
+#         return data["choices"][0]["message"]["content"]
+#     except Exception as e:
+#         return f"LLM request failed: {str(e)}"
+
+def ask_llm(top_commits, query: str):
+    commit_summaries = "\n".join(
+        [f"- {c['hash'][:7]} ({c['date']} by {c['author']}): {c['message']}" for c in top_commits]
     )
 
-    prompt = f"""You are an expert AI code assistant.
-You will be given:
-- A set of git commits and code changes (context).
-- A user question.
+    prompt = f"""
+    You are analyzing a Git repository.
+    The user asked: "{query}".
 
-Instructions:
-- Use only the context provided when answering.
-- Be concise, clear, and directly answer the question.
-- Do not include explanations unless explicitly asked.
+    Here are the most relevant commits:
+    {commit_summaries}
 
-Context:
-{context_str}
+    Provide a concise, human-readable answer.
+    """
 
-Question:
-{question}
+    payload = {
+        "model": "openai/gpt-3.5-turbo",  
+        "messages": [
+            {"role": "system", "content": "You are a helpful Git commit analyst."},
+            {"role": "user", "content": prompt}
+        ]
+    }
 
-Answer:
-"""
-
-    url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
     }
-    payload = {
-        "model": "mistralai/mistral-7b-instruct",
-        "messages": [{"role": "user", "content": prompt}]
-    }
 
     try:
-        res = requests.post(url, headers=headers, json=payload)
-        res.raise_for_status()
-        data = res.json()
-        return data["choices"][0]["message"]["content"]
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        response.raise_for_status()
+        return response.json()["choices"][0]["message"]["content"]
     except Exception as e:
-        return f"LLM request failed: {str(e)}"
+        print("LLM request failed:", e)
+        return "⚠️ Failed to get response from LLM."
 
 
 

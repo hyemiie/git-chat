@@ -1,8 +1,17 @@
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, status, APIRouter
 from pydantic import BaseModel
 from psycopg2 import DatabaseError
 from models.config import conn 
 import datetime
+from psycopg2 import Error, pool
+
+
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+pg_pool = pool.SimpleConnectionPool(1, 10, DATABASE_URL)
 
 router = APIRouter()
 
@@ -20,7 +29,9 @@ class RepoDeleteRequest(BaseModel):
 
 @router.post("/repos/", status_code=201)
 def create_new_repo(payload: RepoCreateRequest):
+    conn = None
     try:
+        conn = pg_pool.getconn()
         date_created = datetime.date.today()
         with conn.cursor() as cur:
             cur.execute("""
@@ -36,11 +47,16 @@ def create_new_repo(payload: RepoCreateRequest):
     except Exception as e:
         print("error", e)
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+    finally:
+        if conn:
+            pg_pool.putconn(conn)
 
 
 @router.get("/repos/list", status_code=200)
 def list_repo(user_id: int):
+    conn = None
     try:
+        conn = pg_pool.getconn()
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM repo_names WHERE user_id = %s", (user_id,))
             rows = cur.fetchall()
@@ -54,11 +70,16 @@ def list_repo(user_id: int):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+    finally:
+        if conn:
+            pg_pool.putconn(conn)
 
 
 @router.delete("/repos/", status_code=200)
 def delete_repo(payload: RepoDeleteRequest):
+    conn = None
     try:
+        conn = pg_pool.getconn()
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM repo_names WHERE id = %s", (payload.repo_id,))
             repo_record = cur.fetchone()
@@ -74,3 +95,6 @@ def delete_repo(payload: RepoDeleteRequest):
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+    finally:
+        if conn:
+            pg_pool.putconn(conn)

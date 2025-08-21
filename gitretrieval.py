@@ -203,7 +203,27 @@ def embed_and_save(repo_id: str, commits):
     return f"Embedded {len(new_commits)} new commits."
 
 
-def retrieve_top_k(repo_id: str, query: str, k: int = 5):
+# def retrieve_top_k(repo_id: str, query: str, k: int = 5):
+#     """Retrieve top-k relevant commits for a given repo."""
+#     repo_dir = os.path.join(DATA_DIR, repo_id)
+#     commits_file = os.path.join(repo_dir, "commits.json")
+#     index_file = os.path.join(repo_dir, "faiss.index")
+
+#     if not (os.path.exists(commits_file) and os.path.exists(index_file)):
+#         raise ValueError("Repo not embedded yet. Please call /embed-repo first.")
+
+#     with open(commits_file, "r") as f:
+#         commits = json.load(f)
+
+#     index = faiss.read_index(index_file)
+
+#     query_emb = MODEL.encode(query).astype("float32").reshape(1, -1)
+#     D, I = index.search(query_emb, k)
+
+#     return [commits[i] for i in I[0] if i < len(commits)]
+
+
+def retrieve_top_k(repo_id: str, query: str, k: int = 5, max_message_len: int = 300):
     """Retrieve top-k relevant commits for a given repo."""
     repo_dir = os.path.join(DATA_DIR, repo_id)
     commits_file = os.path.join(repo_dir, "commits.json")
@@ -220,21 +240,30 @@ def retrieve_top_k(repo_id: str, query: str, k: int = 5):
     query_emb = MODEL.encode(query).astype("float32").reshape(1, -1)
     D, I = index.search(query_emb, k)
 
-    return [commits[i] for i in I[0] if i < len(commits)]
+    results = []
+    for i in I[0]:
+        if i < len(commits):
+            commit = commits[i].copy()
+            msg = commit["message"].strip()
+            if len(msg) > max_message_len:
+                msg = msg[:max_message_len] + "..."
+            commit["message"] = msg
+            results.append(commit)
+
+    return results
 
 
+class RepoRequest(BaseModel):
+    repo_path: str
 
 @router.post("/embed-repo")
-def process_repo(request: dict):
-    repo_path = request["repo_path"]
-    repo_id = get_repo_id(repo_path)
-
-    commits = get_commits(repo_path)
+def process_repo(request: RepoRequest):
+    print("helloo", request)
+    repo_id = get_repo_id(request.repo_path)
+    commits = get_commits(request.repo_path)
     result_message = embed_and_save(repo_id, commits)
 
     return {"repo_id": repo_id, "message": result_message, "commit_count": len(commits)}
-
-
 # @router.post("/analyze-query")
 # def analyze_query(request: dict):
 #     try:

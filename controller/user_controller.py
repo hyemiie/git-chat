@@ -2,6 +2,7 @@ import os
 import bcrypt
 import datetime
 import json
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Depends, HTTPException, APIRouter
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -11,10 +12,17 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import JSONResponse
 from controller.google_auth import create_access_token
 from models.config import conn 
+from psycopg2 import Error, pool
+import datetime
+import psycopg2
 
 router = APIRouter()
 app = FastAPI()
 
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+pg_pool = pool.SimpleConnectionPool(1, 10, DATABASE_URL)
 
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("GOOGLE_SECRET_KEY"))
 GOOGLE_CLIENT_ID =  os.getenv("GOOGLE_CLIENT_ID")
@@ -54,7 +62,9 @@ async def health():
 
 @router.post("/signup")
 def create_new_user(user: UserSignup):
+    conn = None
     try:
+        conn = pg_pool.getconn()
         hashed_password = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt())
 
         with conn.cursor() as cur:
@@ -66,11 +76,16 @@ def create_new_user(user: UserSignup):
         return {"status": "success", "message": "User created successfully"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    finally:
+        if conn:
+            pg_pool.putconn(conn)
 
 
 @router.post("/login")
 def login(user: UserLogin):
+    conn = None
     try:
+        conn = pg_pool.getconn()
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM users WHERE email = %s", (user.email,))
             user_record = cur.fetchone()
@@ -106,12 +121,17 @@ def login(user: UserLogin):
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    finally:
+        if conn:
+            pg_pool.putconn(conn)
 
 
 
 @router.post("/delete")
 def delete_user(user: UserLogin):
+    conn = None
     try:
+        conn = pg_pool.getconn()
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM users WHERE email = %s", (user.email,))
             user_record = cur.fetchone()
@@ -124,6 +144,9 @@ def delete_user(user: UserLogin):
                 return {"status": "fail", "message": "Invalid credentials"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    finally:
+        if conn:
+            pg_pool.putconn(conn)
 
 # @router.get("/login_google")
 # async def login_with_google(request: Request):

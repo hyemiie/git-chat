@@ -1,10 +1,19 @@
 import json
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, APIRouter
 from pydantic import BaseModel
 from typing import Optional
-from models.config import conn 
-from psycopg2 import Error
+# from models.config import conn 
+from psycopg2 import Error, pool
 import datetime
+import psycopg2
+
+
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+pg_pool = pool.SimpleConnectionPool(1, 10, DATABASE_URL)
 
 router = APIRouter()
 
@@ -22,16 +31,16 @@ class ChatDeleteRequest(BaseModel):
 
 @router.post("/chat/add")
 def add_to_chat(payload: ChatAddRequest):
+    conn = None
     try:
+        conn = pg_pool.getconn()
         with conn.cursor() as cur:
-            # Get the next message order for this repo
             cur.execute(
                 "SELECT COALESCE(MAX(message_order), 0) + 1 FROM chat_history WHERE repo_id = %s",
                 (payload.repo_id,)
             )
             next_order = cur.fetchone()[0]
             
-            # Insert the new message
             cur.execute(
                 """INSERT INTO chat_history (repo_id, sender_id, sender_type, message_text, message_order, created_at) 
                    VALUES (%s, %s, %s, %s, %s, %s)""",
@@ -45,10 +54,15 @@ def add_to_chat(payload: ChatAddRequest):
         conn.rollback()
         print("error", e)
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            pg_pool.putconn(conn)
 
 @router.post("/chat/list")
 def list_user_chat(payload: ChatListRequest):
+    conn = None
     try:
+        conn = pg_pool.getconn()
         with conn.cursor() as cur:
             cur.execute(
                 """SELECT id, sender_id, sender_type, message_text, created_at, message_order 
@@ -58,30 +72,33 @@ def list_user_chat(payload: ChatListRequest):
                 (payload.repo_id,)
             )
             messages = cur.fetchall()
-            
-            if messages:
-                message_list = []
-                for msg in messages:
-                    message_list.append({
-                        "id": msg[0],
-                        "sender_id": msg[1],
-                        "sender": msg[2],  
-                        "text": msg[3],  
-                        "created_at": msg[4].isoformat() if msg[4] else None,
-                        "order": msg[5]  
-                    })
-                return {"status": "success", "data": message_list}
-            else:
-                return {"status": "success", "data": []}
+        
+        message_list = [
+            {
+                "id": msg[0],
+                "sender_id": msg[1],
+                "sender": msg[2],
+                "text": msg[3],
+                "created_at": msg[4].isoformat() if msg[4] else None,
+                "order": msg[5]
+            }
+            for msg in messages
+        ]
+        return {"status": "success", "data": message_list}
     except Error as e:
-        print('error', e)
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            pg_pool.putconn(conn)
+
+
 
 @router.delete("/chat/delete")
 def delete_chat(payload: ChatDeleteRequest):
+    conn = None
     try:
+        conn = pg_pool.getconn()
         with conn.cursor() as cur:
-            # Check if chat exists
             cur.execute(
                 "SELECT COUNT(*) FROM chat_history WHERE repo_id = %s",
                 (payload.repo_id,)
@@ -101,10 +118,15 @@ def delete_chat(payload: ChatDeleteRequest):
         conn.rollback()
         print("error", e)
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            pg_pool.putconn(conn)
 
 @router.get("/chat/history/{user_id}/{repo_id}")
 def get_chat_history(user_id: int, repo_id: int):
+    conn = None
     try:
+        conn = pg_pool.getconn()
         with conn.cursor() as cur:
             cur.execute(
                 """SELECT id, sender_type, message_text, created_at, message_order
@@ -120,10 +142,10 @@ def get_chat_history(user_id: int, repo_id: int):
                 for msg in messages:
                     message_list.append({
                         "id": msg[0],
-                        "sender": msg[1],  # sender_type
-                        "text": msg[2],    # message_text
+                        "sender": msg[1],  
+                        "text": msg[2],   
                         "created_at": msg[3].isoformat() if msg[3] else None,
-                        "order": msg[4]    # message_order
+                        "order": msg[4]   
                     })
                 return {"status": "success", "data": message_list}
             else:
@@ -131,10 +153,15 @@ def get_chat_history(user_id: int, repo_id: int):
     except Error as e:
         print("error", e)
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            pg_pool.putconn(conn)
 
 @router.get("/chat/stats/{repo_id}")
 def get_chat_stats(repo_id: int):
+    conn = None
     try:
+        conn = pg_pool.getconn()
         with conn.cursor() as cur:
             cur.execute(
                 """SELECT 
@@ -162,10 +189,15 @@ def get_chat_stats(repo_id: int):
     except Error as e:
         print("error", e)
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            pg_pool.putconn(conn)
 
 @router.delete("/chat/clear_old/{repo_id}")
 def clear_old_messages(repo_id: int, days: int = 30):
+    conn = None
     try:
+        conn = pg_pool.getconn()
         with conn.cursor() as cur:
             cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days)
             cur.execute(
@@ -183,3 +215,6 @@ def clear_old_messages(repo_id: int, days: int = 30):
         conn.rollback()
         print("error", e)
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            pg_pool.putconn(conn)
